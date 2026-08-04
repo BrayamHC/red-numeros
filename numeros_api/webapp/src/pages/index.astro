@@ -1,0 +1,418 @@
+---
+import { API_URL } from '../config';
+
+const techs = [
+  { name: 'Python',     version: '3.12',   icon: 'https://cdn.jsdelivr.net/gh/devicons/devicon/icons/python/python-original.svg',         role: 'Backend / ML',    color: '#f472b6' },
+  { name: 'TensorFlow', version: '2.x',    icon: 'https://cdn.jsdelivr.net/gh/devicons/devicon/icons/tensorflow/tensorflow-original.svg',   role: 'Deep Learning',   color: '#fb923c' },
+  { name: 'NumPy',      version: '1.x',    icon: 'https://cdn.jsdelivr.net/gh/devicons/devicon/icons/numpy/numpy-original.svg',             role: 'Datos',           color: '#e879f9' },
+  { name: 'FastAPI',    version: '0.x',    icon: 'https://cdn.jsdelivr.net/gh/devicons/devicon/icons/fastapi/fastapi-original.svg',         role: 'API',             color: '#34d399' },
+  { name: 'Astro',      version: '6.x',    icon: 'https://cdn.jsdelivr.net/gh/devicons/devicon/icons/astro/astro-original.svg',             role: 'Frontend',        color: '#f9a8d4' },
+  { name: 'Docker',     version: 'latest', icon: 'https://cdn.jsdelivr.net/gh/devicons/devicon/icons/docker/docker-original.svg',           role: 'Infraestructura', color: '#60a5fa' },
+];
+---
+<!DOCTYPE html>
+<html lang="es">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Reconocedor de Dígitos — Marilu Mendoza</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com" />
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;600;700;800&display=swap" rel="stylesheet" />
+  <style>
+    /* ══════════════════════════════════════════════════════════
+       RESET BÁSICO
+       ══════════════════════════════════════════════════════════ */
+    *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+
+    /* ══════════════════════════════════════════════════════════
+       PALETA DE COLORES — cambia aquí para ajustar todo el tema
+       --bg      → color de fondo general de la página
+       --surface → fondo de las tarjetas (canvas, footer chips)
+       --pink    → color de acento principal (títulos, botones, glow)
+       --purple  → acento secundario (chip de alumna)
+       ══════════════════════════════════════════════════════════ */
+    :root {
+      --bg:        #0d0d0f;
+      --surface:   #16151a;
+      --border:    #2a1f2e;
+      --pink:      #f472b6;
+      --pink-dim:  rgba(244,114,182,0.12);
+      --pink-glow: rgba(244,114,182,0.25);
+      --purple:    #c084fc;
+      --text:      #f5e6f0;
+      --muted:     #7a6475;
+      --font: 'Inter', system-ui, sans-serif;
+    }
+
+    html { scroll-behavior: smooth; }
+
+    /* Fondo general de toda la página — cámbialo en --bg de arriba */
+    body {
+      background: var(--bg);
+      color: var(--text);
+      font-family: var(--font);
+      min-height: 100vh;
+    }
+
+    /* ── NAV FIJO ── */
+    nav {
+      position: fixed; top: 0; left: 0; right: 0; z-index: 50;
+      display: flex; align-items: center; justify-content: space-between;
+      padding: 1rem 2rem;
+      background: rgba(13,13,15,0.8); /* mismo tono que --bg con transparencia */
+      backdrop-filter: blur(12px);     /* efecto vidrio al hacer scroll */
+      border-bottom: 1px solid var(--border);
+    }
+    .nav-logo { font-size: 0.9rem; font-weight: 700; color: var(--pink); letter-spacing: -0.02em; }
+    .nav-pill { font-size: 0.7rem; color: var(--muted); border: 1px solid var(--border); padding: 0.3rem 0.8rem; border-radius: 999px; }
+
+    /* ══════════════════════════════════════════════════════════
+       SECCIÓN 1 — HERO
+       Aquí se ajusta la cuadrícula de fondo (.hero-grid) y el
+       resplandor difuso (.hero-glow). Si quieres quitar el
+       efecto de rejilla, borra .hero-grid del HTML.
+       ══════════════════════════════════════════════════════════ */
+    #hero {
+      min-height: 100vh;
+      display: flex; flex-direction: column;
+      align-items: center; justify-content: center;
+      padding: 7rem 1.5rem 4rem;
+      text-align: center;
+      position: relative;
+      overflow: hidden;
+    }
+    /* Rejilla de fondo estilo "grid" — ajusta background-size para cambiar el tamaño de celda */
+    .hero-grid {
+      position: absolute; inset: 0; opacity: 0.06;
+      background-image:
+        linear-gradient(var(--pink) 1px, transparent 1px),
+        linear-gradient(90deg, var(--pink) 1px, transparent 1px);
+      background-size: 40px 40px;
+      pointer-events: none;
+    }
+    /* Resplandor difuso detrás del título — mover con top/left, agrandar con width/height */
+    .hero-glow {
+      position: absolute; top: 20%; left: 50%;
+      transform: translate(-50%, -50%);
+      width: 600px; height: 300px;
+      background: radial-gradient(ellipse, rgba(244,114,182,0.08) 0%, transparent 70%);
+      pointer-events: none;
+    }
+    .hero-badge {
+      display: inline-flex; align-items: center; gap: 0.5rem;
+      border: 1px solid rgba(244,114,182,0.3);
+      background: rgba(244,114,182,0.06);
+      padding: 0.4rem 1rem; border-radius: 999px;
+      font-size: 0.72rem; color: rgba(244,114,182,0.7);
+      letter-spacing: 0.1em; text-transform: uppercase;
+      margin-bottom: 1.8rem;
+    }
+    .hero-badge span.dot { width: 6px; height: 6px; border-radius: 50%; background: var(--pink); animation: pulse 2s infinite; }
+    @keyframes pulse { 0%,100%{opacity:1} 50%{opacity:0.3} }
+
+    .hero-title { font-size: clamp(2.4rem, 6vw, 5rem); font-weight: 800; line-height: 1.1; letter-spacing: -0.04em; margin-bottom: 1rem; }
+    .hero-title .accent { color: var(--pink); }
+    .hero-sub { font-size: clamp(1rem, 2vw, 1.2rem); color: var(--muted); font-weight: 300; margin-bottom: 2rem; max-width: 480px; }
+
+    .alumna-chip {
+      display: inline-flex; align-items: center; gap: 0.75rem;
+      border: 1px solid rgba(192,132,252,0.3);
+      background: rgba(192,132,252,0.06);
+      padding: 0.6rem 1.2rem; border-radius: 12px;
+      margin-bottom: 2.5rem;
+    }
+    .alumna-chip .label { font-size: 0.65rem; color: var(--muted); text-transform: uppercase; letter-spacing: 0.1em; }
+    .alumna-chip .name  { font-size: 0.9rem; font-weight: 600; color: var(--purple); }
+
+    .hero-cta {
+      display: inline-flex; align-items: center; gap: 0.5rem;
+      background: var(--pink); color: #1a0a14;
+      font-weight: 700; font-size: 0.85rem;
+      padding: 0.75rem 1.8rem; border-radius: 10px;
+      text-decoration: none;
+      transition: opacity 0.2s, transform 0.2s;
+      letter-spacing: 0.02em;
+    }
+    .hero-cta:hover { opacity: 0.88; transform: translateY(-1px); }
+
+    /* ══════════════════════════════════════════════════════════
+       SECCIÓN 2 — PREDICTOR (canvas)
+       .canvas-card es la tarjeta contenedora; canvas es el área
+       de dibujo real que se envía a FastAPI (280x280 → 28x28).
+       ══════════════════════════════════════════════════════════ */
+    #predictor {
+      padding: 5rem 1.5rem;
+      display: flex; flex-direction: column;
+      align-items: center; gap: 3rem;
+    }
+    .section-label { text-align: center; }
+    .section-label p { font-size: 0.7rem; color: rgba(244,114,182,0.5); letter-spacing: 0.3em; text-transform: uppercase; margin-bottom: 0.5rem; }
+    .section-label h2 { font-size: 1.8rem; font-weight: 700; letter-spacing: -0.03em; }
+    .section-label h2 span { color: var(--pink); }
+
+    .canvas-card {
+      background: var(--surface);
+      border: 1px solid var(--border);
+      border-radius: 20px;
+      padding: 2rem;
+      display: flex; flex-direction: column;
+      align-items: center; gap: 1.2rem;
+      width: 100%; max-width: 400px;
+      box-shadow: 0 0 40px rgba(244,114,182,0.04);
+    }
+
+    /* Fondo del canvas: debe ser oscuro para coincidir con MNIST (dígito claro / fondo oscuro) */
+    canvas {
+      border: 1.5px solid var(--border);
+      border-radius: 14px;
+      cursor: crosshair;
+      touch-action: none;
+      background: #0a0509;
+      transition: border-color 0.2s, box-shadow 0.2s;
+    }
+    canvas:hover { border-color: var(--pink); box-shadow: 0 0 20px var(--pink-glow); }
+
+    .actions { display: flex; gap: 0.75rem; width: 100%; }
+    button {
+      flex: 1; padding: 0.65rem 1rem; border-radius: 10px;
+      border: 1.5px solid var(--border);
+      font-size: 0.85rem; font-weight: 600; cursor: pointer;
+      transition: all 0.15s;
+      background: transparent; color: var(--text);
+      font-family: var(--font);
+    }
+    button:hover { border-color: var(--pink); background: var(--pink-dim); }
+    button.primary { background: var(--pink); border-color: var(--pink); color: #1a0a14; }
+    button.primary:hover { opacity: 0.88; }
+    button:disabled { opacity: 0.4; cursor: not-allowed; }
+
+    .result {
+      width: 100%; text-align: center; padding: 1.2rem; border-radius: 14px;
+      border: 1.5px solid var(--border); background: var(--bg);
+      min-height: 85px;
+      display: flex; flex-direction: column; align-items: center; justify-content: center; gap: 0.3rem;
+      transition: border-color 0.3s, box-shadow 0.3s;
+    }
+    .result.has-result { border-color: var(--pink); box-shadow: 0 0 24px var(--pink-glow); }
+    .result .digit { font-size: 3.8rem; font-weight: 800; line-height: 1; color: var(--pink); }
+    .result .confidence { font-size: 0.78rem; color: var(--muted); }
+    .result .placeholder { color: var(--muted); font-size: 0.85rem; }
+
+    .bars { display: grid; grid-template-columns: repeat(10, 1fr); gap: 4px; width: 100%; }
+    .bar-wrap { display: flex; flex-direction: column; align-items: center; gap: 3px; }
+    .bar-bg { width: 100%; height: 48px; background: var(--bg); border-radius: 4px; overflow: hidden; display: flex; align-items: flex-end; border: 1px solid var(--border); }
+    .bar-fill { width: 100%; background: var(--border); border-radius: 3px; transition: height 0.4s cubic-bezier(.4,0,.2,1), background 0.3s; }
+    .bar-fill.active { background: var(--pink); }
+    .bar-label { font-size: 0.65rem; color: var(--muted); }
+    .status { font-size: 0.78rem; color: var(--muted); height: 16px; }
+    .status.loading { color: var(--pink); }
+    .status.error   { color: #f87171; }
+
+    /* ══════════════════════════════════════════════════════════
+       SECCIÓN 3 — FOOTER (stack tecnológico)
+       ══════════════════════════════════════════════════════════ */
+    footer { border-top: 1px solid var(--border); padding: 4rem 1.5rem 2.5rem; }
+    .footer-header { text-align: center; margin-bottom: 2.5rem; }
+    .footer-header p { font-size: 0.7rem; color: rgba(244,114,182,0.4); letter-spacing: 0.3em; text-transform: uppercase; margin-bottom: 0.4rem; }
+    .footer-header h3 { font-size: 1.3rem; font-weight: 700; }
+    .footer-header h3 span { color: var(--pink); }
+
+    .tech-grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(140px, 1fr)); gap: 12px; max-width: 900px; margin: 0 auto 3rem; }
+    .tech-chip { display: flex; align-items: center; gap: 0.6rem; padding: 0.7rem 0.9rem; border: 1px solid var(--border); border-radius: 12px; background: var(--surface); transition: border-color 0.2s, background 0.2s, transform 0.2s; }
+    .tech-chip:hover { border-color: var(--pink); background: var(--pink-dim); transform: translateY(-2px); }
+    .tech-chip img { width: 22px; height: 22px; object-fit: contain; }
+    .tech-chip .info { display: flex; flex-direction: column; }
+    .tech-chip .info span:first-child { font-size: 0.82rem; font-weight: 600; }
+    .tech-chip .info span:last-child  { font-size: 0.65rem; color: var(--muted); }
+
+    .footer-bottom { text-align: center; color: var(--muted); font-size: 0.78rem; display: flex; flex-direction: column; gap: 0.3rem; align-items: center; }
+    .footer-bottom strong { color: var(--purple); }
+  </style>
+</head>
+<body>
+
+  <nav>
+    <span class="nav-logo">◈ Dígitos MNIST</span>
+    <span class="nav-pill">Python 3.12 · TensorFlow 2.x</span>
+  </nav>
+
+  <!-- ═══════════ SECCIÓN 1: HERO ═══════════ -->
+  <section id="hero">
+    <div class="hero-grid"></div>
+    <div class="hero-glow"></div>
+
+    <div class="hero-badge">
+      <span class="dot"></span>
+      API activa — FastAPI · Docker
+    </div>
+
+    <h1 class="hero-title">
+      Red <span class="accent">Neuronal</span><br/>
+      de Dígitos
+    </h1>
+
+    <p class="hero-sub">
+      Dibuja un número del 0 al 9 y la red lo identifica en tiempo real usando una red densa entrenada con MNIST.
+    </p>
+
+    <div class="alumna-chip">
+      <div>
+        <div class="label">Alumna</div>
+        <div class="name">Marilu Mendoza Ramírez</div>
+      </div>
+    </div>
+
+    <a href="#predictor" class="hero-cta">Probar ahora ↓</a>
+  </section>
+
+  <!-- ═══════════ SECCIÓN 2: PREDICTOR (canvas) ═══════════ -->
+  <section id="predictor">
+    <div class="section-label">
+      <p>// predictor</p>
+      <h2>Dibuja un <span>dígito</span></h2>
+    </div>
+
+    <div class="canvas-card">
+      <canvas id="canvas" width="280" height="280"></canvas>
+
+      <div class="actions">
+        <button id="clearBtn">Limpiar</button>
+        <button id="predictBtn" class="primary">Reconocer →</button>
+      </div>
+
+      <div class="result" id="result">
+        <span class="placeholder">Tu dígito aparecerá aquí</span>
+      </div>
+
+      <div class="bars" id="bars"></div>
+
+      <span class="status" id="status"></span>
+    </div>
+  </section>
+
+  <!-- ═══════════ SECCIÓN 3: FOOTER (stack) ═══════════ -->
+  <footer>
+    <div class="footer-header">
+      <p>// stack</p>
+      <h3>Tecnologías <span>utilizadas</span></h3>
+    </div>
+
+    <div class="tech-grid">
+      {techs.map(t => (
+        <div class="tech-chip">
+          <img src={t.icon} alt={t.name} loading="lazy" />
+          <div class="info">
+            <span>{t.name}</span>
+            <span>{t.role}</span>
+          </div>
+        </div>
+      ))}
+    </div>
+
+    <div class="footer-bottom">
+      <span>Red Neuronal — Reconocimiento de Dígitos MNIST</span>
+      <span>Alumna: <strong>Marilu Mendoza Ramírez</strong></span>
+      <span style="margin-top:0.4rem; font-size:0.7rem;">FastAPI · TensorFlow · Astro · Docker</span>
+    </div>
+  </footer>
+
+  <script define:vars={{ API_URL }}>
+    // ──────────────────────────────────────────────────────
+    // IMPORTANTE: el trazo es CLARO (blanco/rosa) sobre fondo
+    // OSCURO, igual que MNIST. No inviertas esto en el backend.
+    // ──────────────────────────────────────────────────────
+    const API = API_URL;
+
+    const canvas = document.getElementById('canvas');
+    const ctx    = canvas.getContext('2d');
+    let drawing  = false;
+
+    ctx.lineWidth   = 20;          // grosor del trazo — MNIST usa trazos gruesos
+    ctx.lineCap     = 'round';
+    ctx.lineJoin    = 'round';
+    ctx.strokeStyle = '#ffffff';   // blanco puro: máximo contraste para el modelo
+    ctx.fillStyle   = '#0a0509';   // fondo oscuro del canvas
+    ctx.fillRect(0, 0, canvas.width, canvas.height);
+
+    const pos = (e) => {
+      const r   = canvas.getBoundingClientRect();
+      const src = e.touches?.[0] ?? e;
+      return { x: src.clientX - r.left, y: src.clientY - r.top };
+    };
+
+    canvas.addEventListener('mousedown',  e => { drawing = true; ctx.beginPath(); const p = pos(e); ctx.moveTo(p.x, p.y); });
+    canvas.addEventListener('mousemove',  e => { if (!drawing) return; const p = pos(e); ctx.lineTo(p.x, p.y); ctx.stroke(); });
+    canvas.addEventListener('mouseup',    () => drawing = false);
+    canvas.addEventListener('mouseleave', () => drawing = false);
+    canvas.addEventListener('touchstart', e => { e.preventDefault(); drawing = true; ctx.beginPath(); const p = pos(e); ctx.moveTo(p.x, p.y); }, { passive: false });
+    canvas.addEventListener('touchmove',  e => { e.preventDefault(); if (!drawing) return; const p = pos(e); ctx.lineTo(p.x, p.y); ctx.stroke(); }, { passive: false });
+    canvas.addEventListener('touchend',   () => drawing = false);
+
+    const barsContainer = document.getElementById('bars');
+    const fills = [];
+    for (let i = 0; i < 10; i++) {
+      const wrap = document.createElement('div');
+      wrap.className = 'bar-wrap';
+      wrap.innerHTML = `<div class="bar-bg"><div class="bar-fill" id="fill-${i}" style="height:0%"></div></div><span class="bar-label">${i}</span>`;
+      barsContainer.appendChild(wrap);
+      fills.push(document.getElementById(`fill-${i}`));
+    }
+
+    document.getElementById('clearBtn').addEventListener('click', () => {
+      ctx.fillStyle = '#0a0509';
+      ctx.fillRect(0, 0, canvas.width, canvas.height);
+      fills.forEach(f => { f.style.height = '0%'; f.classList.remove('active'); });
+      const result = document.getElementById('result');
+      result.classList.remove('has-result');
+      result.innerHTML = '<span class="placeholder">Tu dígito aparecerá aquí</span>';
+      setStatus('');
+    });
+
+    document.getElementById('predictBtn').addEventListener('click', async () => {
+      const btn    = document.getElementById('predictBtn');
+      const result = document.getElementById('result');
+      btn.disabled = true;
+      setStatus('Analizando...', 'loading');
+
+      try {
+        // Reescala el trazo de 280x280 a 28x28 — mismo tamaño que espera el modelo
+        const tmp = document.createElement('canvas');
+        tmp.width = tmp.height = 28;
+        tmp.getContext('2d').drawImage(canvas, 0, 0, 28, 28);
+
+        const blob = await new Promise(res => tmp.toBlob(res, 'image/png'));
+        const form = new FormData();
+        form.append('file', blob, 'digit.png');
+
+        const res  = await fetch(`${API}/predict`, { method: 'POST', body: form });
+        if (!res.ok) throw new Error(`HTTP ${res.status}`);
+        const data = await res.json();
+
+        result.classList.add('has-result');
+        result.innerHTML = `
+          <span class="digit">${data.digito}</span>
+          <span class="confidence">${data.confianza}% de confianza</span>
+        `;
+
+        fills.forEach((f, i) => {
+          f.style.height = `${Math.max(2, data.probabilidades[i])}%`;
+          f.classList.toggle('active', i === data.digito);
+        });
+
+        setStatus('');
+      } catch (err) {
+        setStatus(`Error: ${err.message}`, 'error');
+      } finally {
+        btn.disabled = false;
+      }
+    });
+
+    function setStatus(msg, type = '') {
+      const el = document.getElementById('status');
+      el.textContent = msg;
+      el.className   = 'status' + (type ? ` ${type}` : '');
+    }
+  </script>
+
+</body>
+</html>
