@@ -12,9 +12,10 @@ RUN pip install --no-cache-dir -r requirements.txt
 
 COPY . .
 
-# Verifica que el modelo ya esté incluido.
+# Entrenamiento único del modelo.
+RUN python -m app.training.train
+
+# Verificación del modelo generado.
 RUN test -f /app/app/digits_cnn.keras
 
-EXPOSE 8000
-
-CMD ["uvicorn", "app.main:app", "--host", "0.0.0.0", "--port", "8000"]
+CMD ["sleep", "infinity"]
